@@ -219,7 +219,7 @@ public final class PBuilderWorker extends ChrootWorker {
             return false;
         }
         if(archAllLabel != null)
-            if(build.getBuildVariables().values().iterator().next().equals(archAllLabel))
+            if(build.getBuildVariables().containsValue(archAllLabel))
                 archFlag = "-b";
             else
                 archFlag = "-B";
