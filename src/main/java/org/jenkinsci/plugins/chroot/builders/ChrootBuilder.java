@@ -65,6 +65,7 @@ public class ChrootBuilder extends Builder implements Serializable, SimpleBuildS
     private boolean ignoreExit;
     private List<String> additionalPackages = new ArrayList<>();
     private String packagesFile;
+    private String bindMounts;
     private boolean clear;
     private final String command;
     private boolean loginAsRoot;
@@ -137,6 +138,15 @@ public class ChrootBuilder extends Builder implements Serializable, SimpleBuildS
     
     public String getPackagesFile() {
         return Util.fixEmptyAndTrim(packagesFile);
+    }
+    
+    @DataBoundSetter
+    public void setBindMounts(@CheckForNull String bindMounts) {
+        this.bindMounts = Util.fixNull(bindMounts);
+    }
+
+    public String getBindMounts() {
+        return bindMounts;
     }
 
     @DataBoundSetter
@@ -231,7 +241,7 @@ public class ChrootBuilder extends Builder implements Serializable, SimpleBuildS
             }
         }
         ChrootUtil.saveDigest(workerTarBall);
-        if(!installation.getChrootWorker().perform(build, workspace, launcher, listener, workerTarBall, this.command, isLoginAsRoot()) && !ignoreExit)
+        if(!installation.getChrootWorker().perform(build, workspace, launcher, listener, workerTarBall, this.command, this.bindMounts, isLoginAsRoot()) && !ignoreExit)
             throw new IOException();
     }
 

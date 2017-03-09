@@ -21,6 +21,7 @@ public class ChrootStep extends AbstractStepImpl {
     private final @CheckForNull String chrootName;
     private List<String> additionalPackages;
     private @CheckForNull String packagesFile;
+    private @CheckForNull String bindMounts;
     private boolean ignoreExit;
     private boolean clear;
     private final @CheckForNull String command;
@@ -50,6 +51,15 @@ public class ChrootStep extends AbstractStepImpl {
     
     public @CheckForNull String getPackagesFile() {
         return Util.fixEmptyAndTrim(packagesFile);
+    }
+    
+    @DataBoundSetter
+    public void setBindMounts(@CheckForNull String bindMounts) {
+        this.bindMounts = Util.fixNull(bindMounts);
+    }
+    
+    public @CheckForNull String getBindMounts() {
+        return Util.fixEmptyAndTrim(bindMounts);
     }
     
     @DataBoundSetter

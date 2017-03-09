@@ -42,6 +42,7 @@ public class ChrootStepExecution extends AbstractSynchronousNonBlockingStepExecu
         builder.setIgnoreExit(step.isIgnoreExit());
         builder.setAdditionalPackages(step.getAdditionalPackages());
         builder.setPackagesFile(step.getPackagesFile());
+        builder.setBindMounts(step.getBindMounts());
         builder.setClear(step.isClear());
         builder.setNoUpdate(step.isNoUpdate());
         builder.setForceInstall(step.isForceInstall());        

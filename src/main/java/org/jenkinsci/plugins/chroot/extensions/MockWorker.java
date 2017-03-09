@@ -43,6 +43,7 @@ import java.io.IOException;
 import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import org.apache.commons.lang.StringUtils;
 import org.jenkinsci.plugins.chroot.tools.ChrootToolsetProperty;
 import org.jenkinsci.plugins.chroot.tools.Repository;
 import org.jenkinsci.plugins.chroot.util.ChrootUtil;
@@ -115,7 +116,12 @@ public final class MockWorker extends ChrootWorker {
     }
 
     @Override
-    public boolean perform(Run<?, ?> build, FilePath workspace, Launcher launcher, TaskListener listener, FilePath tarBall, String commands, boolean runAsRoot) throws IOException, InterruptedException {
+    public boolean perform(Run<?, ?> build, FilePath workspace, Launcher launcher, TaskListener listener, FilePath tarBall, String commands, String bindMounts, boolean runAsRoot) throws IOException, InterruptedException {
+        if (!StringUtils.isEmpty(bindMounts)) {
+            logger.log(Level.SEVERE,"Bind mounts not supported by Mock");
+            listener.getLogger().append("***Bind mounts not supported by Mock***\n");
+            return false;
+        }
         String toolName = getToolInstanceName(launcher, listener, tarBall);
         String userName = super.getUserName(launcher);
         int id = super.getUID(launcher, userName);
