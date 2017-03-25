@@ -230,9 +230,9 @@ public final class PBuilderWorker extends ChrootWorker {
         }
         if(archAllLabel != null)
             if(archAllLabel.startsWith("__SPECIAL__")) {
-                if(archAllLabel == "__SPECIAL__arch_and_all")
+                if(archAllLabel.equals("__SPECIAL__all_and_arch"))
                     archFlag = "-b";
-                else if(archAllLabel == "__SPECIAL__arch")
+                else if(archAllLabel.equals("__SPECIAL__arch"))
                     archFlag = "-B";
             }
             else {
