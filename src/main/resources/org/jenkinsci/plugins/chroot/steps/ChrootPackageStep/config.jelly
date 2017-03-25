@@ -17,7 +17,7 @@
  You should have received a copy of the GNU General Public License
  along with Chroot-plugin.  If not, see <http://www.gnu.org/licenses/>.
 -->
-
+<?jelly escape-by-default='true'?>
 <j:jelly xmlns:j="jelly:core" xmlns:st="jelly:stapler" xmlns:d="jelly:define" xmlns:l="/lib/layout" xmlns:t="/lib/hudson" xmlns:f="/lib/form">
 <f:entry field="chrootName" title="Chroot Environment">
    <f:textbox />
@@ -30,7 +30,7 @@
 </f:entry>
 
 <f:advanced>
-    <j:if test="${it.getClass().canonicalName == 'org.jenkinsci.plugins.workflow.cps.Snippetizer'}">
+    <j:if test="${it.getClass().canonicalName == 'org.jenkinsci.plugins.workflow.job.WorkflowJob'}">
         <f:entry field="archAllBehaviour" title="Multi-architecture behaviour">
             <f:select/>
         </f:entry>
