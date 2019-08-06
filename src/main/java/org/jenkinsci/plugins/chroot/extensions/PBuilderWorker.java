@@ -30,8 +30,6 @@ import hudson.Extension;
 import hudson.FilePath;
 import hudson.Launcher;
 import hudson.Util;
-import hudson.model.AbstractBuild;
-import hudson.model.BuildListener;
 import hudson.model.Node;
 import hudson.model.Run;
 import hudson.model.TaskListener;
@@ -39,8 +37,9 @@ import hudson.tools.ToolInstallation;
 import hudson.util.ArgumentListBuilder;
 import hudson.util.QuotedStringTokenizer;
 import java.io.ByteArrayOutputStream;
-import java.io.File;
 import java.io.IOException;
+import java.io.OutputStream;
+import java.io.PrintStream;
 import java.util.List;
 import java.util.Map;
 import java.util.logging.Level;
@@ -193,8 +192,22 @@ public final class PBuilderWorker extends ChrootWorker {
             StringBuilder allMounts = new StringBuilder().append(userHome).append(" ").append(bindMounts);
             b.add(allMounts.toString());
         }
+        ArgumentListBuilder testargs = new ArgumentListBuilder().add("sudo").add(getTool())
+                .add("--help");
+        ByteArrayOutputStream stderr = new ByteArrayOutputStream();
+        ByteArrayOutputStream stdout = new ByteArrayOutputStream();
+        try {
+            launcher.launch().cmds(testargs).stderr(stderr).stdout(stdout).join();
+            if (stdout.toString().contains("--killer")) {
+                b.add("--killer");
+            }
+        } catch (IOException ex) {
+            logger.log(Level.SEVERE, null, ex);
+        } catch (InterruptedException ex) {
+            logger.log(Level.SEVERE, null, ex);
+        }
         b.add("--basetgz").add(tarBall.getRemote())
-                .add("--").add(setup_script);
+            .add("--").add(setup_script);
         int exitCode = launcher.launch().cmds(b).envs(environment).stdout(listener).stderr(listener.getLogger()).join();
         script.delete();
         setup_script.delete();
@@ -269,6 +282,7 @@ public final class PBuilderWorker extends ChrootWorker {
                 .add("software-properties-common")
                 .add("python3-software-properties") // fix for ubunt 12.04 to select the fallback packages
                 .add("sudo")
+                .add("gnupg")
                 .add("wget").build();
     }
 
@@ -277,6 +291,7 @@ public final class PBuilderWorker extends ChrootWorker {
         return new ImmutableList.Builder<String>()
                 .add("python-software-properties")
                 .add("sudo")
+                .add("gnupg")
                 .add("wget").build();
     }
 
