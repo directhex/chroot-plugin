@@ -32,7 +32,6 @@ import hudson.tools.ToolInstallation;
 import hudson.tools.ToolInstaller;
 import hudson.tools.ToolInstallerDescriptor;
 import java.io.IOException;
-import org.apache.commons.lang.builder.HashCodeBuilder;
 import org.jenkinsci.plugins.chroot.extensions.ChrootWorker;
 import org.kohsuke.stapler.DataBoundConstructor;
 

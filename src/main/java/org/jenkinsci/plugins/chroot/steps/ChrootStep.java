@@ -2,7 +2,6 @@ package org.jenkinsci.plugins.chroot.steps;
 
 import hudson.Extension;
 import hudson.Util;
-import java.util.Arrays;
 import java.util.List;
 import javax.annotation.CheckForNull;
 import javax.annotation.Nonnull;

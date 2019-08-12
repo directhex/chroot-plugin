@@ -23,7 +23,6 @@
  */
 package org.jenkinsci.plugins.chroot.tools;
 
-import hudson.model.Computer;
 import hudson.tools.ToolProperty;
 import java.io.BufferedReader;
 import java.io.IOException;

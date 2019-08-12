@@ -27,8 +27,6 @@ import hudson.ExtensionList;
 import hudson.ExtensionPoint;
 import hudson.FilePath;
 import hudson.Launcher;
-import hudson.model.AbstractBuild;
-import hudson.model.BuildListener;
 import hudson.model.Node;
 import hudson.model.Run;
 import hudson.model.TaskListener;

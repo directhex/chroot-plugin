@@ -26,9 +26,10 @@ package org.jenkinsci.plugins.chroot.util;
 import com.google.common.base.CharMatcher;
 import com.google.common.base.Splitter;
 import com.google.common.collect.Lists;
-import hudson.FilePath;
-import java.io.IOException;
 import java.util.List;
+import java.security.MessageDigest; 
+import java.security.NoSuchAlgorithmException;
+import java.math.BigInteger; 
 
 /**
  *
@@ -36,7 +37,6 @@ import java.util.List;
  */
 public class ChrootUtil {
 
-    public static final String MD5_SUFFIX = ".md5";
     private static final Splitter stringSplitter = Splitter.on(CharMatcher.anyOf(",; \t\n\r")).trimResults().omitEmptyStrings();
 
     public static List<String> splitPackages(String packages) {
