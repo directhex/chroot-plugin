@@ -54,36 +54,32 @@ public class ChrootUtil {
             return Lists.newArrayList();
         }
     }
-
-    public static FilePath saveDigest(FilePath file) throws IOException, InterruptedException {
-        FilePath md5 = getDigestFile(file);
-        md5.write(file.digest(), null);
-        return md5;
-    }
-
-    public static String loadDigest(FilePath file) throws IOException, InterruptedException {
-        FilePath md5 = getDigestFile(file);
-        if (!md5.exists()) {
-            return null;
-        }
-        return md5.readToString().trim();
-    }
-
-    public static FilePath getDigestFile(FilePath file) {
-        return new FilePath(file.getParent(), file.getName() + MD5_SUFFIX);
-    }
-
-    public static boolean isFileIntact(FilePath file) throws IOException, InterruptedException {
-        if (!file.exists()) {
-            return false;
-        }
-        String digest = loadDigest(file);
-        if (digest == null) {
-            return false;
-        }
-        if (!file.digest().equals(digest)) {
-            return false;
-        }
-        return true;
+    
+public static String getMd5(String input) 
+    { 
+        try { 
+  
+            // Static getInstance method is called with hashing MD5 
+            MessageDigest md = MessageDigest.getInstance("MD5"); 
+  
+            // digest() method is called to calculate message digest 
+            //  of an input digest() return array of byte 
+            byte[] messageDigest = md.digest(input.getBytes()); 
+  
+            // Convert byte array into signum representation 
+            BigInteger no = new BigInteger(1, messageDigest); 
+  
+            // Convert message digest into hex value 
+            String hashtext = no.toString(16); 
+            while (hashtext.length() < 32) { 
+                hashtext = "0" + hashtext; 
+            } 
+            return hashtext; 
+        }  
+  
+        // For specifying wrong message digest algorithms 
+        catch (NoSuchAlgorithmException e) { 
+            throw new RuntimeException(e); 
+        } 
     }
 }

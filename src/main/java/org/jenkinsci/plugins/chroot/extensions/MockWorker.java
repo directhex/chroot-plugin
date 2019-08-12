@@ -61,23 +61,25 @@ public final class MockWorker extends ChrootWorker {
     public FilePath setUp(ToolInstallation tool, Node node, TaskListener log) throws IOException, InterruptedException {
         FilePath rootDir = node.getRootPath();
 
-        // get path to tarball
-        FilePath tarBall;
+        // get path to base path
+        FilePath basePath;
         ChrootToolsetProperty property = tool.getProperties().get(ChrootToolsetProperty.class);
         // take the property into account if it exists
-        tarBall = rootDir.child(tool.getName() + ".tgz");
-        FilePath chrootDir = node.getRootPath().createTempDir(tool.getName(), "");
-        FilePath cacheDir = chrootDir.child("cache");
-        FilePath buildDir = chrootDir.child("root");
-        FilePath resultDir = rootDir.child("result");
+        String digest = ChrootUtil.getMd5("");
+        if (property != null)
+            digest = ChrootUtil.getMd5(StringUtils.join(property.getPackagesList(), " "));
+        basePath = rootDir.child(getName()).child(tool.getName() + "-" + digest + "." + hudson.model.Executor.currentExecutor().getNumber());
+        FilePath cacheDir = basePath.child("cache");
+        FilePath buildDir = basePath.child("root");
+        FilePath resultDir = basePath.child("result");
 
-        if (!tarBall.exists()) {
+        if (!basePath.exists()) {
             // copy /etc/mock/default.cfg to this location
             FilePath system_default_cfg = node.createPath("/etc/mock/" + tool.getName() + ".cfg");
             FilePath system_logging_cfg = node.createPath("/etc/mock/logging.ini");
-            FilePath default_cfg = new FilePath(chrootDir, tool.getName() + ".cfg");
-            FilePath logging_cfg = new FilePath(chrootDir, "logging.ini");
-            FilePath site_default_cfg = new FilePath(chrootDir, "site-defaults.cfg");
+            FilePath default_cfg = new FilePath(basePath, tool.getName() + "-" + digest + ".cfg");
+            FilePath logging_cfg = new FilePath(basePath, "logging.ini");
+            FilePath site_default_cfg = new FilePath(basePath, "site-defaults.cfg");
 
             system_default_cfg.copyTo(default_cfg);
             system_logging_cfg.copyTo(logging_cfg);
@@ -92,17 +94,13 @@ public final class MockWorker extends ChrootWorker {
             ArgumentListBuilder cmd = new ArgumentListBuilder();
             cmd.add(getTool())
                     .add("-r").add(default_cfg.getBaseName())
-                    .add("--configdir").add(chrootDir.getRemote())
+                    .add("--configdir").add(basePath.getRemote())
                     .add("--resultdir").add(resultDir.getRemote())
                     .add("--init");
             Launcher launcher = node.createLauncher(log);
             int ret = launcher.launch().cmds(cmd).stdout(log).stderr(log.getLogger()).join();
-            packChroot(node, log, tarBall, chrootDir);
-            cmd = new ArgumentListBuilder();
-            cmd.add("sudo").add("rm").add("-fr").add(chrootDir);
-            ret = launcher.launch().cmds(cmd).stdout(log).stderr(log.getLogger()).join();
         }
-        return tarBall;
+        return basePath;
     }
 
     @Override
@@ -116,27 +114,24 @@ public final class MockWorker extends ChrootWorker {
     }
 
     @Override
-    public boolean perform(Run<?, ?> build, FilePath workspace, Launcher launcher, TaskListener listener, FilePath tarBall, String commands, String bindMounts, boolean runAsRoot) throws IOException, InterruptedException {
+    public boolean perform(Run<?, ?> build, FilePath workspace, Launcher launcher, TaskListener listener, FilePath basePath, String commands, String bindMounts, boolean runAsRoot) throws IOException, InterruptedException {
         if (!StringUtils.isEmpty(bindMounts)) {
             logger.log(Level.SEVERE,"Bind mounts not supported by Mock");
             listener.getLogger().append("***Bind mounts not supported by Mock***\n");
             return false;
         }
-        String toolName = getToolInstanceName(launcher, listener, tarBall);
+        String toolName = getToolInstanceName(launcher, listener, basePath);
         String userName = super.getUserName(launcher);
         int id = super.getUID(launcher, userName);
         commands = "cd " + workspace.getRemote() + "\n" + commands;
         FilePath script = workspace.createTextTempFile("chroot", ".sh", commands);
 
         FilePath rootDir = workspace;
-        Node node = tarBall.toComputer().getNode();
-        FilePath chrootDir = rootDir.createTempDir("chroot", "");
+        Node node = basePath.toComputer().getNode();
         FilePath resultDir = rootDir.child("result");
-        FilePath buildDir = chrootDir.child("root");
-        FilePath cacheDir = chrootDir.child("cache");
-        FilePath default_cfg = new FilePath(chrootDir, toolName + ".cfg");
-
-        unpackChroot(tarBall.toComputer().getNode(), listener, tarBall, chrootDir);
+        FilePath buildDir = basePath.child("root");
+        FilePath cacheDir = basePath.child("cache");
+        FilePath default_cfg = new FilePath(basePath, toolName + ".cfg");
 
         String cfg_content = String.format(
                 "config_opts['basedir'] = '%s'\n"
@@ -153,19 +148,16 @@ public final class MockWorker extends ChrootWorker {
 
         ArgumentListBuilder b = new ArgumentListBuilder().add(getTool())
                 .add("-r").add(default_cfg.getBaseName())
-                .add("--configdir").add(chrootDir.getRemote())
+                .add("--configdir").add(basePath.getRemote())
                 .add("--resultdir").add(resultDir.getRemote()).add("--chroot").add("/bin/sh").add(script);
 
         int exitCode = launcher.launch().cmds(b).stdout(listener).stderr(listener.getLogger()).join();
         script.delete();
-        ArgumentListBuilder cmd = new ArgumentListBuilder();
-        cmd.add("sudo").add("rm").add("-fr").add(chrootDir);
-        int ret = launcher.launch().cmds(cmd).stdout(listener).stderr(listener.getLogger()).join();
         return exitCode == 0;
     }
 
     @Override
-    public boolean perform(Run<?, ?> build, FilePath workspace, Launcher launcher, TaskListener listener, FilePath tarBall, String archAllLabel, String sourcepackage) throws IOException, InterruptedException {
+    public boolean perform(Run<?, ?> build, FilePath workspace, Launcher launcher, TaskListener listener, FilePath basePath, String archAllLabel, String sourcepackage) throws IOException, InterruptedException {
 
         EnvVars environment = build.getEnvironment(listener);
         FilePath[] sourcePackageFiles = workspace.list(Util.replaceMacro(sourcepackage, environment));
@@ -174,19 +166,16 @@ public final class MockWorker extends ChrootWorker {
             return false;
         }
 
-        String toolName = getToolInstanceName(launcher, listener, tarBall);
+        String toolName = getToolInstanceName(launcher, listener, basePath);
         String userName = super.getUserName(launcher);
         int id = super.getUID(launcher, userName);
 
         FilePath rootDir = workspace;
-        Node node = tarBall.toComputer().getNode();
-        FilePath chrootDir = rootDir.createTempDir("chroot", "");
+        Node node = basePath.toComputer().getNode();
         FilePath resultDir = rootDir.child("result");
-        FilePath buildDir = chrootDir.child("root");
-        FilePath cacheDir = chrootDir.child("cache");
-        FilePath default_cfg = new FilePath(chrootDir, toolName + ".cfg");
-
-        unpackChroot(tarBall.toComputer().getNode(), listener, tarBall, chrootDir);
+        FilePath buildDir = basePath.child("root");
+        FilePath cacheDir = basePath.child("cache");
+        FilePath default_cfg = new FilePath(basePath, toolName + ".cfg");
 
         String cfg_content = String.format(
                 "config_opts['basedir'] = '%s'\n"
@@ -199,18 +188,15 @@ public final class MockWorker extends ChrootWorker {
 
         ArgumentListBuilder b = new ArgumentListBuilder().add(getTool())
                 .add("-v").add("-r").add(default_cfg.getBaseName())
-                .add("--configdir").add(chrootDir.getRemote())
+                .add("--configdir").add(basePath.getRemote())
                 .add("--resultdir").add(resultDir.getRemote()).add("--rebuild").add(sourcePackageFiles[0]);
 
         int exitCode = launcher.launch().cmds(b).stdout(listener).stderr(listener.getLogger()).join();
-        ArgumentListBuilder cmd = new ArgumentListBuilder();
-        cmd.add("sudo").add("rm").add("-fr").add(chrootDir);
-        int ret = launcher.launch().cmds(cmd).stdout(listener).stderr(listener.getLogger()).join();
         return exitCode == 0;
     }
 
     @Override
-    public boolean installPackages(Run<?, ?> build, Launcher launcher, TaskListener listener, FilePath tarBall, List<String> packages, boolean forceInstall) throws IOException, InterruptedException {
+    public boolean installPackages(Run<?, ?> build, Launcher launcher, TaskListener listener, FilePath basePath, List<String> packages, boolean forceInstall) throws IOException, InterruptedException {
         throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
 
@@ -219,39 +205,29 @@ public final class MockWorker extends ChrootWorker {
     }
 
     @Override
-    public boolean addRepositories(FilePath tarBall, Launcher launcher, TaskListener log, List<Repository> Repositories) throws IOException, InterruptedException {
+    public boolean addRepositories(FilePath basePath, Launcher launcher, TaskListener log, List<Repository> Repositories) throws IOException, InterruptedException {
         throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
 
     @Override
-    public boolean cleanUp(Run<?, ?> build, Launcher launcher, TaskListener listener, FilePath tarBall) throws IOException, InterruptedException {
+    public boolean cleanUp(Run<?, ?> build, Launcher launcher, TaskListener listener, FilePath basePath) throws IOException, InterruptedException {
         throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
 
     @Override
-    public boolean updateRepositories(Run<?, ?> build, Launcher launcher, TaskListener log, FilePath tarBall) throws IOException, InterruptedException {
+    public boolean updateRepositories(Run<?, ?> build, Launcher launcher, TaskListener log, FilePath basePath) throws IOException, InterruptedException {
         try {
-            String toolName = getToolInstanceName(launcher, log, tarBall);
-            FilePath rootDir = tarBall.toComputer().getNode().getRootPath();
-            FilePath chrootDir = rootDir.createTempDir(toolName, "");
-            FilePath cacheDir = chrootDir.child("cache");
-            FilePath buildDir = chrootDir.child("build");
-            FilePath resultDir = chrootDir.child("result");
-            resultDir.mkdirs();
-            unpackChroot(tarBall.toComputer().getNode(), log, tarBall, chrootDir);
+            String toolName = getToolInstanceName(launcher, log, basePath);
+            FilePath cacheDir = basePath.child("cache");
+            FilePath buildDir = basePath.child("build");
             ArgumentListBuilder cmd = new ArgumentListBuilder();
-            FilePath default_cfg = new FilePath(chrootDir, toolName + ".cfg");
+            FilePath default_cfg = new FilePath(basePath, toolName + ".cfg");
             cmd.add(getTool())
                     .add("-r").add(default_cfg.getBaseName())
-                    .add("--configdir").add(chrootDir.getRemote())
-                    .add("--resultdir").add(resultDir.getRemote())
+                    .add("--configdir").add(basePath.getRemote())
                     .add("--update");
             int ret = launcher.launch().cmds(cmd).stdout(log).stderr(log.getLogger()).join();
-            packChroot(tarBall.toComputer().getNode(), log, tarBall, chrootDir);
-            cmd = new ArgumentListBuilder();
-            cmd.add("sudo").add("rm").add("-fr").add(chrootDir);
-            ret = launcher.launch().cmds(cmd).stdout(log).stderr(log.getLogger()).join();
-            return true;
+            return ret == 0;
         } catch (Exception e) {
             return false;
         }
@@ -282,51 +258,12 @@ public final class MockWorker extends ChrootWorker {
         throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
 
-    private static Boolean packChroot(Node node, TaskListener log, FilePath tarBall, FilePath chrootDir) {
-        try {
-            Launcher launcher = node.createLauncher(log);
-            ArgumentListBuilder cmd = new ArgumentListBuilder();
-            cmd.add("sudo").add("tar").add("-c").add("-z").add("-f")
-                    .add(tarBall).add("-C").add(chrootDir).add(".");
-            int ret = launcher.launch().cmds(cmd).stdout(log).stderr(log.getLogger()).join();
-            cmd = new ArgumentListBuilder();
-            cmd.add("sudo").add("rm").add("-fr").add(chrootDir);
-            ret = launcher.launch().cmds(cmd).stdout(log).stderr(log.getLogger()).join();
-            ChrootUtil.saveDigest(tarBall);
-            return true;
-        } catch (Exception e) {
-            return false;
-        }
-    }
-
-    private static Boolean unpackChroot(Node node, TaskListener log, FilePath tarBall, FilePath chrootDir) {
-        try {
-            Launcher launcher = node.createLauncher(log);
-            FilePath unzippedTarBall = new FilePath(new File(tarBall.getRemote().replace(".tgz", ".tar")));
-            ArgumentListBuilder cmd = new ArgumentListBuilder();
-            cmd.add("sudo").add("rm").add("-fr").add(chrootDir);
-            int ret = launcher.launch().cmds(cmd).stdout(log).stderr(log.getLogger()).join();
-            chrootDir.mkdirs();
-            cmd = new ArgumentListBuilder();
-            cmd.add("gunzip").add("-k").add(tarBall);
-            ret = launcher.launch().cmds(cmd).stdout(log).stderr(log.getLogger()).join();
-            cmd = new ArgumentListBuilder();
-            cmd.add("sudo").add("tar").add("-x").add("-f")
-                    .add(unzippedTarBall).add("-C").add(chrootDir);
-            ret = launcher.launch().cmds(cmd).stdout(log).stderr(log.getLogger()).join();
-            unzippedTarBall.delete();
-            return true;
-        } catch (Exception e) {
-            return false;
-        }
-    }
-
-    private static String getToolInstanceName(Launcher launcher, TaskListener log, FilePath tarBall) {
+    private static String getToolInstanceName(Launcher launcher, TaskListener log, FilePath basePath) {
         ByteArrayOutputStream stdout = new ByteArrayOutputStream();
         try {
             ArgumentListBuilder cmd = new ArgumentListBuilder();
 
-            cmd.add("/usr/bin/basename").add(tarBall.toString()).add(".tgz");
+            cmd.add("/usr/bin/basename").add(basePath.toString()).add("." + hudson.model.Executor.currentExecutor().getNumber());
             int ret = launcher.launch().cmds(cmd).stdout(stdout).stderr(log.getLogger()).join();
         } catch (Exception e) {
             return null;

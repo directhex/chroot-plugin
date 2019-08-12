@@ -46,7 +46,7 @@ public final class ChrootToolsetProperty extends ToolProperty<ChrootToolset> imp
 
     private List<String> packages;
     private String setupCommand;
-    private File tarball; //deprecated
+    private File basePath; //deprecated
     private List<Repository> repositories;
     private String setupArguments;
 
@@ -55,9 +55,9 @@ public final class ChrootToolsetProperty extends ToolProperty<ChrootToolset> imp
     }
 
     @DataBoundConstructor
-    public ChrootToolsetProperty(String setupCommand, String packages, String tarball, String setupArguments, List<Repository> repos) {
+    public ChrootToolsetProperty(String setupCommand, String packages, String basePath, String setupArguments, List<Repository> repos) {
         super();
-        this.tarball = null;
+        this.basePath = null;
         this.packages = ChrootUtil.splitPackages(packages);
         this.setupArguments = setupArguments;
         this.setupCommand = setupCommand;

@@ -21,22 +21,12 @@
  * To change this template, choose Tools | Templates
  * and open the template in the editor.
  */
-package org.jenkinsci.plugins.chroot.extensions;
-
-import hudson.Extension;
-import java.util.logging.Logger;
+package org.jenkinsci.plugins.chroot.tools;
 
 /**
  *
- * @author rmohr
+ * @author directhex
  */
-@Extension
-public final class PBuilderWorker extends CowbuilderWorker {
-
-    private static final Logger logger = Logger.getLogger("jenkins.plugins.chroot.extensions.PBuilderWorker");
-
-    @Override
-    public String getName() {
-        return "pbuilder";
-    }
+public class CowbuilderToolset {
+    
 }

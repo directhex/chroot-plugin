@@ -129,28 +129,6 @@ public class ChrootPackageBuilder extends Builder implements Serializable, Simpl
         return ignoreExit;
     }
 
-    private static final class LocalCopyTo implements FileCallable<Void> {
-
-        private final String target;
-
-        public LocalCopyTo(String target) {
-            this.target = target;
-        }
-
-        @Override
-        public Void invoke(File source, VirtualChannel channel) throws IOException, InterruptedException {
-            FilePath _source = new FilePath(source);
-            FilePath _target = new FilePath(new File(target));
-            _source.copyTo(_target);
-            return null;
-        }
-
-        @Override
-        public void checkRoles(RoleChecker rc) throws SecurityException {
-            throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
-        }
-    }
-
     @Override
     public void perform(Run<?, ?> build, FilePath workspace, Launcher launcher, TaskListener listener) throws InterruptedException, IOException {
         EnvVars env = build.getEnvironment(listener);
@@ -163,30 +141,10 @@ public class ChrootPackageBuilder extends Builder implements Serializable, Simpl
                     + " the user, Jenkins uses, cann run pbuilder with sudo.");
             throw new IOException("Installation of chroot environment failed");
         }
-        FilePath tarBall = new FilePath(workspace.toComputer().getNode().getChannel(), installation.getHome());
-
-        FilePath workerTarBall = workspace.child(env.expand(this.chrootName)).child(tarBall.getName());
-        workerTarBall.getParent().mkdirs();
-
-        // force environment recreation when clear is selected
-        if (isClear()) {
-            boolean ret = installation.getChrootWorker().cleanUp(build, launcher, listener, workerTarBall);
-            if (ret == false) {
-                listener.fatalError("Chroot environment cleanup failed");
-                if(ignoreExit)
-                    return;
-                else
-                    throw new IOException("Chroot environment cleanup failed");
-            }
-        }
-
-        if (!workerTarBall.exists() || !ChrootUtil.isFileIntact(workerTarBall) || tarBall.lastModified() > workerTarBall.lastModified()) {
-            tarBall.act(new LocalCopyTo(workerTarBall.getRemote()));
-            ChrootUtil.getDigestFile(tarBall).act(new LocalCopyTo(ChrootUtil.getDigestFile(workerTarBall).getRemote()));
-        }
+        FilePath basePath = new FilePath(workspace.toComputer().getNode().getChannel(), installation.getHome());
 
         if (!this.isNoUpdate()) {
-            boolean ret = installation.getChrootWorker().updateRepositories(build, launcher, listener, workerTarBall);
+            boolean ret = installation.getChrootWorker().updateRepositories(build, launcher, listener, basePath);
             if (ret == false) {
                 listener.fatalError("Updating repository indices in chroot environment failed.");
                 if(ignoreExit)
@@ -195,11 +153,10 @@ public class ChrootPackageBuilder extends Builder implements Serializable, Simpl
                     throw new IOException("Updating repository indices in chroot environment failed.");
             }
         }
-        ChrootUtil.saveDigest(workerTarBall);
         String tempArchAllLabel = this.archAllLabel;
         if(this.archAllBehaviour != null && this.archAllBehaviour != "")
             tempArchAllLabel = "__SPECIAL__" + this.archAllBehaviour;
-        if (!installation.getChrootWorker().perform(build, workspace, launcher, listener, workerTarBall, tempArchAllLabel, this.sourcePackage) && !ignoreExit)
+        if (!installation.getChrootWorker().perform(build, workspace, launcher, listener, basePath, tempArchAllLabel, this.sourcePackage) && !ignoreExit)
             throw new IOException("Package build failed");
     }
 

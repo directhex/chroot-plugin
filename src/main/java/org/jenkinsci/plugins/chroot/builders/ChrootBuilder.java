@@ -148,26 +148,6 @@ public class ChrootBuilder extends Builder implements Serializable, SimpleBuildS
         return bindMounts;
     }
 
-    private static final class LocalCopyTo implements FileCallable<Void> {
-
-        private final String target;
-
-        public LocalCopyTo(String target) {
-            this.target = target;
-        }
-
-        public Void invoke(File source, VirtualChannel channel) throws IOException, InterruptedException {
-            FilePath _source = new FilePath(source);
-            FilePath _target = new FilePath(new File(target));
-            _source.copyTo(_target);
-            return null;
-        }
-
-        public void checkRoles(RoleChecker rc) throws SecurityException {
-            throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
-        }
-    }
-
     @Override
     public void perform(Run<?, ?> build, FilePath workspace, Launcher launcher, TaskListener listener) throws InterruptedException, IOException {
         EnvVars env = build.getEnvironment(listener);
@@ -181,25 +161,7 @@ public class ChrootBuilder extends Builder implements Serializable, SimpleBuildS
             // return false;
             throw new IOException("Failure");
         }
-        FilePath tarBall = new FilePath(launcher.getChannel(), installation.getHome());
-
-        FilePath workerTarBall = workspace.child(env.expand(this.chrootName)).child(tarBall.getName());
-        workerTarBall.getParent().mkdirs();
-
-        // force environment recreation when clear is selected
-        if (workerTarBall.exists() && isClear()) {
-            boolean ret = installation.getChrootWorker().cleanUp(build, launcher, listener, workerTarBall);
-            if (ret == false) {
-                listener.fatalError("Chroot environment cleanup failed");
-                // return ret || ignoreExit;
-                throw new IOException("Failure");
-            }
-        }
-
-        if (!workerTarBall.exists() || !ChrootUtil.isFileIntact(workerTarBall) || tarBall.lastModified() > workerTarBall.lastModified()) {
-            tarBall.act(new LocalCopyTo(workerTarBall.getRemote()));
-            ChrootUtil.getDigestFile(tarBall).act(new LocalCopyTo(ChrootUtil.getDigestFile(workerTarBall).getRemote()));
-        }
+        FilePath basePath = new FilePath(launcher.getChannel(), installation.getHome());
 
         //install extra packages
         List<String> packages = new LinkedList<String>(this.additionalPackages);
@@ -216,22 +178,21 @@ public class ChrootBuilder extends Builder implements Serializable, SimpleBuildS
         }
 
         if (!packages.isEmpty()) {
-            boolean ret = installation.getChrootWorker().installPackages(build, launcher, listener, workerTarBall, packages, isForceInstall());
+            boolean ret = installation.getChrootWorker().installPackages(build, launcher, listener, basePath, packages, isForceInstall());
             if (ret == false) {
                 listener.fatalError("Installing additional packages in chroot environment failed.");
                 // return ret || ignoreExit;
                 throw new IOException("Failure");
             }
         } else if (!this.isNoUpdate()) {
-            boolean ret = installation.getChrootWorker().updateRepositories(build, launcher, listener, workerTarBall);
+            boolean ret = installation.getChrootWorker().updateRepositories(build, launcher, listener, basePath);
             if (ret == false) {
                 listener.fatalError("Updating repository indices in chroot environment failed.");
                 // return ret || ignoreExit;
                 throw new IOException("Failure");
             }
         }
-        ChrootUtil.saveDigest(workerTarBall);
-        if(!installation.getChrootWorker().perform(build, workspace, launcher, listener, workerTarBall, this.command, this.bindMounts, isLoginAsRoot()) && !ignoreExit)
+        if(!installation.getChrootWorker().perform(build, workspace, launcher, listener, basePath, this.command, this.bindMounts, isLoginAsRoot()) && !ignoreExit)
             throw new IOException();
     }
 
