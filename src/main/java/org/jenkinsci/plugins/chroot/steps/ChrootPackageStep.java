@@ -18,7 +18,6 @@ public class ChrootPackageStep extends AbstractStepImpl {
     private final @CheckForNull String chrootName;
     private @CheckForNull String archAllLabel;
     private boolean ignoreExit;
-    private boolean clear;
     private final @CheckForNull String sourcePackage;
     private boolean noUpdate;
     private boolean forceInstall;
@@ -73,15 +72,6 @@ public class ChrootPackageStep extends AbstractStepImpl {
     
     public boolean isIgnoreExit() {
         return ignoreExit;
-    }
-
-    @DataBoundSetter
-    public void setClear(boolean clear) {
-        this.clear = clear;
-    }
-    
-    public boolean isClear() {
-        return clear;
     }
     
     @Extension

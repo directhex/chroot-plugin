@@ -66,7 +66,6 @@ public class ChrootBuilder extends Builder implements Serializable, SimpleBuildS
     private List<String> additionalPackages = new ArrayList<>();
     private String packagesFile;
     private String bindMounts;
-    private boolean clear;
     private final String command;
     private boolean loginAsRoot;
     private boolean noUpdate;
@@ -147,15 +146,6 @@ public class ChrootBuilder extends Builder implements Serializable, SimpleBuildS
 
     public String getBindMounts() {
         return bindMounts;
-    }
-
-    @DataBoundSetter
-    public void setClear(boolean clear) {
-        this.clear = clear;
-    }
-    
-    public boolean isClear() {
-        return clear;
     }
 
     private static final class LocalCopyTo implements FileCallable<Void> {

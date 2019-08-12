@@ -22,9 +22,6 @@
 <f:entry field="chrootName" title="Chroot Environment">
    <f:textbox />
 </f:entry>
-<f:entry field="clear" title="Clear">
-<f:checkbox />
-</f:entry>
 <f:entry field="sourcePackage" title="Source package">
 <f:textbox/>
 </f:entry>

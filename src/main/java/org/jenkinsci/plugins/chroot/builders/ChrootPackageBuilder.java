@@ -65,7 +65,6 @@ public class ChrootPackageBuilder extends Builder implements Serializable, Simpl
     private final String chrootName;
     private String archAllLabel;
     private boolean ignoreExit;
-    private boolean clear;
     private final String sourcePackage;
     private boolean noUpdate;
     private boolean forceInstall;
@@ -128,15 +127,6 @@ public class ChrootPackageBuilder extends Builder implements Serializable, Simpl
     
     public boolean isIgnoreExit() {
         return ignoreExit;
-    }
-
-    @DataBoundSetter
-    public void setClear(boolean clear) {
-        this.clear = clear;
-    }
-    
-    public boolean isClear() {
-        return clear;
     }
 
     private static final class LocalCopyTo implements FileCallable<Void> {

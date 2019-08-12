@@ -40,7 +40,6 @@ public class ChrootPackageStepExecution extends AbstractSynchronousNonBlockingSt
         ChrootPackageBuilder builder = new ChrootPackageBuilder(step.getChrootName(), step.getSourcePackage());
         builder.setArchAllBehaviour(step.getArchAllBehaviour());
         builder.setIgnoreExit(step.isIgnoreExit());
-        builder.setClear(step.isClear());
         builder.setNoUpdate(step.isNoUpdate());
         builder.setForceInstall(step.isForceInstall());
         builder.perform(build, ws, launcher, listener);

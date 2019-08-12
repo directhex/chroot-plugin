@@ -23,7 +23,6 @@ public class ChrootStep extends AbstractStepImpl {
     private @CheckForNull String packagesFile;
     private @CheckForNull String bindMounts;
     private boolean ignoreExit;
-    private boolean clear;
     private final @CheckForNull String command;
     private boolean loginAsRoot;
     private boolean noUpdate;
@@ -104,15 +103,6 @@ public class ChrootStep extends AbstractStepImpl {
     
     public boolean isIgnoreExit() {
         return ignoreExit;
-    }
-
-    @DataBoundSetter
-    public void setClear(boolean clear) {
-        this.clear = clear;
-    }
-    
-    public boolean isClear() {
-        return clear;
     }
     
     @Extension
