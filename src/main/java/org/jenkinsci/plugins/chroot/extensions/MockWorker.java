@@ -29,6 +29,7 @@ import hudson.Extension;
 import hudson.FilePath;
 import hudson.Launcher;
 import hudson.Util;
+import hudson.model.Executor;
 import hudson.model.Node;
 import hudson.model.Run;
 import hudson.model.TaskListener;
@@ -64,7 +65,11 @@ public final class MockWorker extends ChrootWorker {
         String digest = ChrootUtil.getMd5("");
         if (property != null)
             digest = ChrootUtil.getMd5(StringUtils.join(property.getPackagesList(), " "));
-        basePath = rootDir.child(getName()).child(tool.getName() + "-" + digest + "." + hudson.model.Executor.currentExecutor().getNumber());
+        Executor thisExecutor = Executor.currentExecutor();
+        String executorSuffix = "";
+        if (thisExecutor != null)
+            executorSuffix = "." + thisExecutor.getNumber();
+        basePath = rootDir.child(getName()).child(tool.getName() + "-" + digest + executorSuffix);
         FilePath cacheDir = basePath.child("cache");
         FilePath buildDir = basePath.child("root");
         FilePath resultDir = basePath.child("result");
@@ -258,8 +263,11 @@ public final class MockWorker extends ChrootWorker {
         ByteArrayOutputStream stdout = new ByteArrayOutputStream();
         try {
             ArgumentListBuilder cmd = new ArgumentListBuilder();
-
-            cmd.add("/usr/bin/basename").add(basePath.toString()).add("." + hudson.model.Executor.currentExecutor().getNumber());
+            Executor thisExecutor = Executor.currentExecutor();
+            String executorSuffix = "";
+            if (thisExecutor != null)
+                executorSuffix = "." + thisExecutor.getNumber();
+            cmd.add("/usr/bin/basename").add(basePath.toString()).add(executorSuffix);
             int ret = launcher.launch().cmds(cmd).stdout(stdout).stderr(log.getLogger()).join();
         } catch (Exception e) {
             return null;
