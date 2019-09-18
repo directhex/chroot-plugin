@@ -152,6 +152,8 @@ public final class MockWorker extends ChrootWorker {
 
         int exitCode = launcher.launch().cmds(b).stdout(listener).stderr(listener.getLogger()).join();
         script.delete();
+        b = new ArgumentListBuilder().add("sudo").add("rm").add("-rf").add(jobSpecificBasePath);
+        int removeExitCode = launcher.launch().cmds(b).stdout(listener).stderr(listener.getLogger()).join();
         return exitCode == 0;
     }
 
@@ -183,6 +185,8 @@ public final class MockWorker extends ChrootWorker {
                 .add("--resultdir").add(resultDir.getRemote()).add("--rebuild").add(sourcePackageFiles[0]);
 
         int exitCode = launcher.launch().cmds(b).stdout(listener).stderr(listener.getLogger()).join();
+        b = new ArgumentListBuilder().add("sudo").add("rm").add("-rf").add(jobSpecificBasePath);
+        int removeExitCode = launcher.launch().cmds(b).stdout(listener).stderr(listener.getLogger()).join();
         return exitCode == 0;
     }
 
