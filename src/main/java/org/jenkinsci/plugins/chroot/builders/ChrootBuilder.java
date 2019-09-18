@@ -181,7 +181,7 @@ public class ChrootBuilder extends Builder implements Serializable, SimpleBuildS
                 throw new IOException("Failure");
             }
         } else if (!this.isNoUpdate()) {
-            boolean ret = installation.getChrootWorker().updateRepositories(build, launcher, listener, basePath);
+            boolean ret = installation.getChrootWorker().updateRepositories(build, launcher, listener, basePath, workspace);
             if (ret == false) {
                 listener.fatalError("Updating repository indices in chroot environment failed.");
                 // return ret || ignoreExit;

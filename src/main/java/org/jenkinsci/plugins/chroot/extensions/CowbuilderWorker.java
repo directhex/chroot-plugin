@@ -324,7 +324,7 @@ public class CowbuilderWorker extends ChrootWorker {
     }
 
     @Override
-    public boolean updateRepositories(Run<?, ?> build, Launcher launcher, TaskListener listener, FilePath basePath) throws IOException, InterruptedException {
+    public boolean updateRepositories(Run<?, ?> build, Launcher launcher, TaskListener listener, FilePath basePath, FilePath workspace) throws IOException, InterruptedException {
         ArgumentListBuilder b = new ArgumentListBuilder().add("sudo").add(getTool())
                 .add("--update")
                 .add("--basepath").add(basePath.getRemote());

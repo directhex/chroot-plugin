@@ -141,7 +141,7 @@ public class ChrootPackageBuilder extends Builder implements Serializable, Simpl
         FilePath basePath = new FilePath(workspace.toComputer().getNode().getChannel(), installation.getHome());
 
         if (!this.isNoUpdate()) {
-            boolean ret = installation.getChrootWorker().updateRepositories(build, launcher, listener, basePath);
+            boolean ret = installation.getChrootWorker().updateRepositories(build, launcher, listener, basePath, workspace);
             if (ret == false) {
                 listener.fatalError("Updating repository indices in chroot environment failed.");
                 if(ignoreExit)

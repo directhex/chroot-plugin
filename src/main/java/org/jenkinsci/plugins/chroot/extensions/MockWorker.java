@@ -38,6 +38,7 @@ import hudson.util.ArgumentListBuilder;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.apache.commons.lang.StringUtils;
@@ -128,19 +129,16 @@ public final class MockWorker extends ChrootWorker {
         FilePath script = workspace.createTextTempFile("chroot", ".sh", commands);
 
         FilePath rootDir = workspace;
+        FilePath jobSpecificBasePath = workspace.child(toolName);
         Node node = basePath.toComputer().getNode();
         FilePath resultDir = rootDir.child("result");
-        FilePath buildDir = basePath.child("root");
-        FilePath cacheDir = basePath.child("cache");
-        FilePath default_cfg = new FilePath(basePath, toolName + ".cfg");
+        FilePath buildDir = jobSpecificBasePath.child("root");
+        FilePath cacheDir = jobSpecificBasePath.child("cache");
+        FilePath default_cfg = new FilePath(jobSpecificBasePath, toolName + ".cfg");
 
-        String cfg_content = String.format(
-                "config_opts['basedir'] = '%s'\n"
-                + "config_opts['cache_topdir'] = '%s'\n"
-                + "config_opts['plugin_conf']['bind_mount_enable'] = True\n"
+        String cfg_content = String.format("config_opts['plugin_conf']['bind_mount_enable'] = True\n"
                 + "config_opts['plugin_conf']['bind_mount_opts']['dirs'].append(('%s', '%s' ))\n"
-                + "%s", buildDir.getRemote(),
-                cacheDir.getRemote(),
+                + "%s", 
                 node.getRootPath().absolutize().getRemote(),
                 node.getRootPath().absolutize().getRemote(),
                 default_cfg.readToString());
@@ -149,7 +147,7 @@ public final class MockWorker extends ChrootWorker {
 
         ArgumentListBuilder b = new ArgumentListBuilder().add(getTool())
                 .add("-r").add(default_cfg.getBaseName())
-                .add("--configdir").add(basePath.getRemote())
+                .add("--configdir").add(jobSpecificBasePath.getRemote())
                 .add("--resultdir").add(resultDir.getRemote()).add("--chroot").add("/bin/sh").add(script);
 
         int exitCode = launcher.launch().cmds(b).stdout(listener).stderr(listener.getLogger()).join();
@@ -172,24 +170,16 @@ public final class MockWorker extends ChrootWorker {
         int id = super.getUID(launcher, userName);
 
         FilePath rootDir = workspace;
+        FilePath jobSpecificBasePath = workspace.child(toolName);
         Node node = basePath.toComputer().getNode();
         FilePath resultDir = rootDir.child("result");
-        FilePath buildDir = basePath.child("root");
-        FilePath cacheDir = basePath.child("cache");
-        FilePath default_cfg = new FilePath(basePath, toolName + ".cfg");
-
-        String cfg_content = String.format(
-                "config_opts['basedir'] = '%s'\n"
-                + "config_opts['cache_topdir'] = '%s'\n"
-                + "%s", buildDir.getRemote(),
-                cacheDir.getRemote(),
-                default_cfg.readToString());
-
-        default_cfg.write(cfg_content, "UTF-8");
+        FilePath buildDir = jobSpecificBasePath.child("root");
+        FilePath cacheDir = jobSpecificBasePath.child("cache");
+        FilePath default_cfg = new FilePath(jobSpecificBasePath, toolName + ".cfg");
 
         ArgumentListBuilder b = new ArgumentListBuilder().add(getTool())
                 .add("-v").add("-r").add(default_cfg.getBaseName())
-                .add("--configdir").add(basePath.getRemote())
+                .add("--configdir").add(jobSpecificBasePath.getRemote())
                 .add("--resultdir").add(resultDir.getRemote()).add("--rebuild").add(sourcePackageFiles[0]);
 
         int exitCode = launcher.launch().cmds(b).stdout(listener).stderr(listener.getLogger()).join();
@@ -216,16 +206,35 @@ public final class MockWorker extends ChrootWorker {
     }
 
     @Override
-    public boolean updateRepositories(Run<?, ?> build, Launcher launcher, TaskListener log, FilePath basePath) throws IOException, InterruptedException {
+    public boolean updateRepositories(Run<?, ?> build, Launcher launcher, TaskListener log, FilePath basePath, FilePath workspace) throws IOException, InterruptedException {
         try {
             String toolName = getToolInstanceName(launcher, log, basePath);
-            FilePath cacheDir = basePath.child("cache");
-            FilePath buildDir = basePath.child("build");
+            FilePath jobSpecificBasePath = workspace.child(toolName);
             ArgumentListBuilder cmd = new ArgumentListBuilder();
-            FilePath default_cfg = new FilePath(basePath, toolName + ".cfg");
+            if (!jobSpecificBasePath.exists()) {
+                cmd.add("sudo").add("cp").add("-a").add(basePath.getRemote()).add(jobSpecificBasePath.getRemote());
+                int ret = launcher.launch().cmds(cmd).stdout(log).stderr(log.getLogger()).join();
+                if (ret != 0)
+                    return false;
+                FilePath buildDir = jobSpecificBasePath.child("root");
+                FilePath cacheDir = jobSpecificBasePath.child("cache");
+                FilePath default_cfg = new FilePath(jobSpecificBasePath, toolName + ".cfg");
+
+                String cfg_content = String.format(
+                    "config_opts['basedir'] = '%s'\n"
+                    + "config_opts['cache_topdir'] = '%s'\n"
+                    + "%s", buildDir.getRemote(),
+                    cacheDir.getRemote(),
+                    default_cfg.readToString());
+                default_cfg.write(cfg_content, "UTF-8");
+            }
+            FilePath cacheDir = jobSpecificBasePath.child("cache");
+            FilePath buildDir = jobSpecificBasePath.child("build");
+            FilePath default_cfg = new FilePath(jobSpecificBasePath, toolName + ".cfg");
+            cmd = new ArgumentListBuilder();
             cmd.add(getTool())
                     .add("-r").add(default_cfg.getBaseName())
-                    .add("--configdir").add(basePath.getRemote())
+                    .add("--configdir").add(jobSpecificBasePath.getRemote())
                     .add("--update");
             int ret = launcher.launch().cmds(cmd).stdout(log).stderr(log.getLogger()).join();
             return ret == 0;

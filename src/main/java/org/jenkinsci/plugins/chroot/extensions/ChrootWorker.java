@@ -66,7 +66,7 @@ public abstract class ChrootWorker implements ExtensionPoint {
 
     public abstract boolean addRepositories(FilePath basePath, Launcher launcher, TaskListener log, List<Repository> Repositories) throws IOException, InterruptedException;
 
-    public abstract boolean updateRepositories(Run<?, ?> build, Launcher launcher, TaskListener listener, FilePath basePath) throws IOException, InterruptedException;
+    public abstract boolean updateRepositories(Run<?, ?> build, Launcher launcher, TaskListener listener, FilePath basePath, FilePath workspace) throws IOException, InterruptedException;
 
     public static ExtensionList<ChrootWorker> all() {
         return Jenkins.getInstance().getExtensionList(ChrootWorker.class);
