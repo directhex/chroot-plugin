@@ -29,7 +29,6 @@ import hudson.Extension;
 import hudson.FilePath;
 import hudson.Launcher;
 import hudson.Util;
-import hudson.model.Executor;
 import hudson.model.Node;
 import hudson.model.Run;
 import hudson.model.TaskListener;
@@ -38,7 +37,6 @@ import hudson.util.ArgumentListBuilder;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.List;
-import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.apache.commons.lang.StringUtils;
@@ -66,11 +64,7 @@ public final class MockWorker extends ChrootWorker {
         String digest = ChrootUtil.getMd5("");
         if (property != null)
             digest = ChrootUtil.getMd5(StringUtils.join(property.getPackagesList(), " "));
-        Executor thisExecutor = Executor.currentExecutor();
-        String executorSuffix = "";
-        if (thisExecutor != null)
-            executorSuffix = "." + thisExecutor.getNumber();
-        basePath = rootDir.child(getName()).child(tool.getName() + "-" + digest + executorSuffix);
+        basePath = rootDir.child(getName()).child(tool.getName() + "-" + digest);
         FilePath cacheDir = basePath.child("cache");
         FilePath buildDir = basePath.child("root");
         FilePath resultDir = basePath.child("result");
@@ -276,11 +270,7 @@ public final class MockWorker extends ChrootWorker {
         ByteArrayOutputStream stdout = new ByteArrayOutputStream();
         try {
             ArgumentListBuilder cmd = new ArgumentListBuilder();
-            Executor thisExecutor = Executor.currentExecutor();
-            String executorSuffix = "";
-            if (thisExecutor != null)
-                executorSuffix = "." + thisExecutor.getNumber();
-            cmd.add("/usr/bin/basename").add(basePath.toString()).add(executorSuffix);
+            cmd.add("/usr/bin/basename").add(basePath.toString());
             int ret = launcher.launch().cmds(cmd).stdout(stdout).stderr(log.getLogger()).join();
         } catch (Exception e) {
             return null;
